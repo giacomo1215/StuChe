@@ -16,37 +16,42 @@ document.addEventListener('DOMContentLoaded', () => {                   // Ensur
                 const worksheet = workbook.Sheets[workbook.SheetNames[0]];  // Get the first worksheet
                 const students = XLSX.utils.sheet_to_json(worksheet);       // Convert the worksheet to JSON
 
-                const hasApptIssue = (value) => 
-                    value === undefined ||
-                    value === "" ||
-                    value?.includes("No") ||
-                    value?.includes("-");
+                const hasApptIssue = (value) =>                             // Check if there's issues
+                    value === undefined ||                                  // Undefined value
+                    value === "" ||                                         // Empty string
+                    value?.includes("No") ||                                // Contains "No"
+                    value?.includes("-");                                   // Contains a dash
 
+                // Filter students with appointment issues
                 const flaggedStudents = students.filter(student =>
                     ['1 Appt', '2 Appt', '3 Appt'].some(appt => hasApptIssue(student[appt]))
                 );
 
                 // Determine specific issues for flagged students
-                flaggedStudents.forEach(student => {
-                    const appointments = ['1 Appt', '2 Appt', '3 Appt'];
+                flaggedStudents.forEach(student => {                                // Iterate through flagged students
+                    const appointments = ['1 Appt', '2 Appt', '3 Appt'];            // Appointment keys
                     
-                    for (const appt of appointments) {
-                        const value = student[appt];
-                        const [apptNumber] = appt.split(' ');
+                    for (const appt of appointments) {                              // Iterate through appts
+                        const value = student[appt];                                // Get the appointment value
+                        const [apptNumber] = appt.split(' ');                       // Extract appointment number
 
-                        if (value?.includes("No") || value === undefined) {
-                            student.Issue = `Missing ${apptNumber} appointment`;
-                            break;
-                        } else if (value === "") {
-                            student.Issue = `Empty ${apptNumber} appointment`;
-                            break;
-                        } else if (value?.includes("-")) {
-                            student.Issue = "Booked but not attended";
-                            break;
+                        switch (true) {
+                            case value?.includes("No") || value === undefined:       // Check for "No" or undefined
+                                student.Issue = `Missing ${apptNumber} appointment`; // Set issue
+                                break;
+                            case value === "":                                       // Check for empty string
+                                student.Issue = `Empty ${apptNumber} appointment`;   // Set issue
+                                break;
+                            case value?.includes("-"):                               // Check for dash
+                                student.Issue = "Booked but not attended";           // Set issue
+                                break;
+                            default:                                                 // Default case
+                                student.Issue = "Unknown issue";                     // Set issue
                         }
                     }
                 });
 
+                // Build the result table in case there are flagged students
                 const html = flaggedStudents.length > 0
                 ? flaggedStudents.map(student => `
                         <tr>
@@ -58,8 +63,8 @@ document.addEventListener('DOMContentLoaded', () => {                   // Ensur
                     `).join('')
                 : "<tr><td colspan='4'>No flagged students found.</td></tr>";
 
-                resultsPanel.innerHTML = html;
-                resultCard.style.display = "block";            // Show the results card
+                resultsPanel.innerHTML = html;                                      // Set the table header
+                resultCard.style.display = "block";                                 // Show the results card
             };
 
             reader.readAsArrayBuffer(file);
