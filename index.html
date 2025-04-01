@@ -16,6 +16,12 @@
             <h1>👩🏽‍💻 StuChe</h1>
             <p>Student Checker</p>
         </div>
+        <div class="alert alert-danger d-none" id="errorAlert">
+            <div class="alert-body">
+                <h5 class="alert-heading fw-bold">Oh no, an error!</h5>
+                <p id="errorMessage"></p>
+            </div>
+        </div>
         <div class="card">
             <div class="card-header">
                 <h5>Upload Excel File</h5>
@@ -37,7 +43,7 @@
                                 <th>Student ID</th>
                                 <th>First Name</th>
                                 <th>Last Name</th>
-                                <th>Follow Up</th>
+                                <th>Issues:</th>
                             </tr>
                         </thead>
                         <tbody id="results">
