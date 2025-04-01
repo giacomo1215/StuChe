@@ -2,39 +2,72 @@ document.addEventListener('DOMContentLoaded', () => {                   // Ensur
     const resultsPanel = document.getElementById('results');            // Get the results panel element
     const resultCard = document.getElementById('resultsCard');          // Get the results card element
     const excelFileInput = document.getElementById('excelFile');        // Get the file input element
+    const errorMessageBody = document.getElementById('errorMessage');   // Get the error message body element
+    const errorMessage = document.getElementById('errorAlert');         // Get the error message alert element
 
-    excelFileInput.addEventListener('change', (event) => {
-        const file = event.target.files[0];                             // Get the selected file
-        const reader = new FileReader();                                // Create a new FileReader instance
+    try {
+        excelFileInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];                             // Get the selected file
+            const reader = new FileReader();                                // Create a new FileReader instance
 
-        reader.onload = function(e) {
-            const data = new Uint8Array(e.target.result);               // Read the file data
-            const workbook = XLSX.read(data, { type: 'array' });        // Parse the Excel file
-            const worksheet = workbook.Sheets[workbook.SheetNames[0]];  // Get the first worksheet
-            const students = XLSX.utils.sheet_to_json(worksheet);       // Convert the worksheet to JSON
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);               // Read the file data
+                const workbook = XLSX.read(data, { type: 'array' });        // Parse the Excel file
+                const worksheet = workbook.Sheets[workbook.SheetNames[0]];  // Get the first worksheet
+                const students = XLSX.utils.sheet_to_json(worksheet);       // Convert the worksheet to JSON
 
-            const flaggedStudents = students.filter(student =>          // Filter students based on criteria
-                !student["1 Appt"] ||                                   // Check if "1 Appt" is empty
-                student["2 Appt"]?.includes("-") ||                     // Check if "2 Appt" contains "-"
-                student["3 Appt"]?.includes("-")                        // Check if "3 Appt" contains "-"
-            );
+                const hasApptIssue = (value) => 
+                    value === undefined ||
+                    value === "" ||
+                    value?.includes("No") ||
+                    value?.includes("-");
 
-            let html = "";
-            flaggedStudents.forEach(student => {                        // Iterate over flagged students
-                html += "<tr>";                                         // Start a new table row
-                html += `<td>${student["SID"]}</td>`;                   // Add student ID
-                html += `<td>${student["First Name"]}</td>`;            // Add student name
-                html += `<td>${student["Last Name "]}</td>`;            // Add student name
-                html += `<td>${student["1 Appt"] || "N/A"}</td>`;       // Add "1 Appt" value
-                html += "</tr>";                                        // Close the table row
-            });
-            if (flaggedStudents.length === 0) {                         // If no students are flagged
-                html = "<tr><td colspan='4'>No flagged students found.</td></tr>"; // Show a message
-            }
-            resultsPanel.innerHTML = html;                              // Update the results panel with the HTML
-            resultCard.style.display = "block";                         // Show the results card
-        };
+                const flaggedStudents = students.filter(student =>
+                    ['1 Appt', '2 Appt', '3 Appt'].some(appt => hasApptIssue(student[appt]))
+                );
 
-        reader.readAsArrayBuffer(file);
-    });
+                // Determine specific issues for flagged students
+                flaggedStudents.forEach(student => {
+                    const appointments = ['1 Appt', '2 Appt', '3 Appt'];
+                    
+                    for (const appt of appointments) {
+                        const value = student[appt];
+                        const [apptNumber] = appt.split(' ');
+
+                        if (value?.includes("No") || value === undefined) {
+                            student.Issue = `Missing ${apptNumber} appointment`;
+                            break;
+                        } else if (value === "") {
+                            student.Issue = `Empty ${apptNumber} appointment`;
+                            break;
+                        } else if (value?.includes("-")) {
+                            student.Issue = "Booked but not attended";
+                            break;
+                        }
+                    }
+                });
+
+                const html = flaggedStudents.length > 0
+                ? flaggedStudents.map(student => `
+                        <tr>
+                            <td>${student.SID}</td>
+                            <td>${student["First Name"]}</td>
+                            <td>${student["Last Name "]}</td>
+                            <td>${student.Issue}</td>
+                        </tr>
+                    `).join('')
+                : "<tr><td colspan='4'>No flagged students found.</td></tr>";
+
+                resultsPanel.innerHTML = html;
+                resultCard.style.display = "block";            // Show the results card
+            };
+
+            reader.readAsArrayBuffer(file);
+        });
+    } catch (error) {
+        console.error(error);
+        errorMessageBody.innerHTML = error.message;                         // Display the error message
+        errorMessage.classList.remove('d-none');                            // Show the error alert
+        resultCard.classList.add('d-none');                                 // Hide the results card
+    }
 });
